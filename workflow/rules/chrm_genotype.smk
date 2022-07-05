@@ -4,9 +4,11 @@ rule chrM_fa:
     output:
         fa="resources/chrM.fa",
         idx="resources/chrM.fa.fai",
-    conda:
-        "../envs/samtools.yaml",
+    params:
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
     shell:
+        "source {params.conda} && conda activate {params.env};"
         "samtools faidx {input.fa} chrM > {output.fa}; "
         "samtools faidx {output.fa}; "
 
@@ -16,9 +18,11 @@ rule chrM_dict:
     output:
         dict="resources/chrM.dict",
         bed="resources/chrM.bed",
-    conda:
-        "../envs/gatk.yaml",
+    params:
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
     shell:
+        "source {params.conda} && conda activate {params.env};"
         "gatk CreateSequenceDictionary -R {input} ; "
         "echo -e 'chrM\t1\t'$(grep 'chrM' resources/chrM.dict  | cut -f3 | sed 's/LN://') > {output.bed}"
 
@@ -27,12 +31,13 @@ rule subset_chrM:
         "results/alignment/recal/{sample}.bqsr.bam",
     output:
         bam="results/sampleid/chrM/{sample}.chrM.bam",
-    conda:
-        "../envs/samtools.yaml",
     params:
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
         param='-bh',
         chr='chrM',
     shell:
+        "source {params.conda} && conda activate {params.env};"
         "samtools view {params.param} {input} {params.chr} > {output.bam} ; "
 
 rule chrM_index:
@@ -41,7 +46,8 @@ rule chrM_index:
     output:
         "results/sampleid/chrM/{sample}.chrM.bam.bai",
     params:
-        "" # optional params string
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
     wrapper:
         "0.73.0/bio/samtools/index"
 
@@ -89,11 +95,13 @@ rule tabix_vcf:
         tbi="results/sampleid/chrM/{sample}.chrM.vcf.gz.tbi",
     log:
         "logs/gatk/genotype_checker/tabix_{sample}.log",
-    conda:
-        "../envs/vcftools.yaml",
+    params:
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
     resources:
         mem_mb=1024
     shell:
+        "source {params.conda} && conda activate {params.env};"
         "bgzip {input.vcf} ; "
         "tabix {output.gz}"
 
@@ -104,11 +112,13 @@ rule chrM_vcf_merge:
         vcf="results/sampleid/chrM/merge.vcf",
     log:
         "logs/gatk/genotype_checker/merge.log",
-    conda:
-        "../envs/vcftools.yaml",
+    params:
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
     resources:
         mem_mb=8192
     shell:
+        "source {params.conda} && conda activate {params.env};"
         "vcf-merge {input.vcfs} > {output.vcf}"
 
 rule genotype_checker:
@@ -125,11 +135,12 @@ rule genotype_checker:
         "logs/gatk/genotype_checker/merge.log",
     params:
         samples=",".join(expand("{sample}", sample=samples.index)),
-    conda:
-        "../envs/r.yaml",
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
     resources:
         mem_mb=8192
     shell:
+        "source {params.conda} && conda activate {params.env};"
         "Rscript workflow/scripts/genotypeChecker.R "
         "{input.vcf} "
         "'{params.samples}' "

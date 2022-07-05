@@ -8,14 +8,19 @@ rule collect_allelic_counts:
   log:
     "logs/gatk/collectalleliccounts/{sample}.log"
   params:
+    conda=config['env']['conda_shell'],
+    env=directory(config['env']['preprocess']),
     ref=config['common']['genome'],
     target=config['params']['gatk']['collectalleliccounts']['target'],
   shell:
-    "gatk --java-options '-Xmx20G  -XX:ParallelGCThreads=4' CollectAllelicCounts "
-    "-I {input} "
-    "-R {params.ref} "
-    "-L {params.target} "
-    "-O {output} > {log} 2>&1"
+    """
+    source {params.conda} && conda activate {params.env};
+    gatk --java-options '-Xmx20G  -XX:ParallelGCThreads=4' CollectAllelicCounts "
+    -I {input}
+    -R {params.ref}
+    -L {params.target}
+    -O {output} > {log} 2>&1
+    """
 
 rule categorizeAD_gatk:
   input:
@@ -24,15 +29,17 @@ rule categorizeAD_gatk:
     intermediate=temp("results/zygosity/counts/{sample}_out.tmp"),
     simple=temp("results/zygosity/counts/{sample}_out.tsv"),
   params:
+    conda=config['env']['conda_shell'],
+    env=directory(config['env']['preprocess']),
     ref=2,
     alt=3,
-  conda:
-    "../envs/perl.yaml",
   shell:
-    "grep -v '^@' {input} | tail -n +2 > {output.intermediate}; "
-    "perl workflow/scripts/allelic_count_helper.pl categorize "
-    "{output.intermediate} {params.ref} {params.alt} > {output.simple}"
-
+    """
+    source {params.conda} && conda activate {params.env};
+    grep -v '^@' {input} | tail -n +2 > {output.intermediate};
+    perl workflow/scripts/allelic_count_helper.pl categorize
+    {output.intermediate} {params.ref} {params.alt} > {output.simple}
+    """
 
 rule aggregate_AD:
   input:
@@ -40,25 +47,28 @@ rule aggregate_AD:
   output:
     "results/zygosity/AD/aggregate.csv",
   params:
-    ""
-  conda:
-    "../envs/perl.yaml",
+    conda=config['env']['conda_shell'],
+    env=directory(config['env']['preprocess']),
   shell:
-    "paste -d',' {input} > {output}; "
-
+    """
+    source {params.conda} && conda activate {params.env};
+    paste -d',' {input} > {output};
+    """
 rule get_AD_lines:
   input:
     "results/zygosity/AD/aggregate.csv",
   output:
     "results/zygosity/AD/aggregate_lines.txt",
   params:
+    conda=config['env']['conda_shell'],
+    env=directory(config['env']['preprocess']),
     min_n=2,
-  conda:
-    "../envs/perl.yaml",
   shell:
-    "perl workflow/scripts/allelic_count_helper.pl setlines "
-    "{input} {params.min_n} > {output}; "
-
+    """
+    source {params.conda} && conda activate {params.env};
+    perl workflow/scripts/allelic_count_helper.pl setlines
+    {input} {params.min_n} > {output};
+    """
 rule filt_AD_raw:
   input:
     filt_lines="results/zygosity/AD/aggregate_lines.txt",
@@ -66,10 +76,11 @@ rule filt_AD_raw:
   output:
     "results/zygosity/AD/aggregate_filt.csv",
   params:
+    conda=config['env']['conda_shell'],
+    env=directory(config['env']['preprocess']),
     samples=expand("{sample}", sample=samples.index),
-  conda:
-    "../envs/perl.yaml",
   shell:
+    "source {params.conda} && conda activate {params.env};"
     "echo {params.samples} | sed 's/\s/,/g' > {output}; "
     "perl workflow/scripts/allelic_count_helper.pl getlines "
     "{input.filt_lines} {input.aggregate_raw} >> {output}; "
@@ -80,10 +91,11 @@ rule filt_AD_dbsnp:
   output:
     "results/zygosity/AD/aggregate_pos.txt",
   params:
+    conda=config['env']['conda_shell'],
+    env=directory(config['env']['preprocess']),
     target=config['params']['gatk']['collectalleliccounts']['target'],
-  conda:
-    "../envs/perl.yaml",
   shell:
+    "source {params.conda} && conda activate {params.env};"
     "perl workflow/scripts/allelic_count_helper.pl getlines "
     "{input.filt_lines} {params.target} > {output}; "
 
@@ -101,9 +113,11 @@ rule run_wp_zygosity:
     cndir='results/cnv/ichorcna',
     genome=config['common']['build'],
     maxstate=300,
-  conda:
-    "../envs/r.yaml",
+    conda=config['env']['conda_shell'],
+    env=directory(config['env']['preprocess']),
+
   shell:
+    "source {params.conda} && conda activate {params.env};"
     "wp_zygosity.R "
     "--hetposf {input.het_pos} "
     "--hetf {input.het_cnt} "
@@ -123,9 +137,11 @@ rule run_wp_identity_autosome:
   params:
     outdir='results/sampleid/autosome',
     midpoint=0.03,
-  conda:
-    "../envs/r.yaml",
+    conda=config['env']['conda_shell'],
+    env=directory(config['env']['preprocess']),
+
   shell:
+    "source {params.conda} && conda activate {params.env};"
     "wp_identity.R "
     "--sample {input.het_cnt} "
     "--midpoint {params.midpoint} "

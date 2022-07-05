@@ -21,9 +21,12 @@ rule collect_chr_metrics:
         "results/chrM/copies/{sample}.wgs_metrics"
     log:
         "logs/picard/wgs_metrics/{sample}_chrM.log"
-    conda:
-        "../envs/picard.yaml"
+    params:
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
+
     shell:
+        "source {params.conda} && conda activate {params.env};"
         "picard CollectWgsMetrics "
         "I={input.bam} "
         "O={output} "
@@ -36,7 +39,11 @@ rule get_coverages:
         genome=rules.collect_wgs_metrics.output,
     output:
         temp("results/chrM/copies/{sample}.tmp")
+    params:
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
     shell:
+        "source {params.conda} && conda activate {params.env};"
         "echo -e {wildcards.sample}'\t'$(head -8 {input.chrm} | tail -1 | cut -f2)'\t'$(head -8 {input.genome} | tail -1 | cut -f2) > {output}"
 
 rule estimate_mt_copies:
@@ -44,7 +51,11 @@ rule estimate_mt_copies:
         covs=expand("results/chrM/copies/{sample}.tmp", sample=samples.index),
     output:
         cov="results/chrM/copies/all_cov.wgs_metrics"
+    params:
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
     shell:
+        "source {params.conda} && conda activate {params.env};"
         "cat {input.covs} > {output.cov};"
 
 rule plot_chrM_copies:
@@ -55,9 +66,11 @@ rule plot_chrM_copies:
                     caption="../report/chrM_copies.rst", category='chrM'),
         tbl=report("results/chrM/copies/chrM_copies.tsv",
                     caption="../report/chrM_copies.rst", category='chrM')
-    conda:
-        "../envs/r.yaml",
+    params:
+        conda=config['env']['conda_shell'],
+        env=directory(config['env']['preprocess']),
     shell:
+        "source {params.conda} && conda activate {params.env};"
         "Rscript workflow/scripts/chrM_copies.R "
         "{input} {output.tbl} {output.plot}"
 

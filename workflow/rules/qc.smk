@@ -61,13 +61,13 @@ rule collect_wgs_metrics:
     shell:
         """
         source {params.conda} && conda activate {params.env};
-        
+
         picard CollectWgsMetrics \
         I={input.bam} \
         O={output} \
         R={input.ref} 2> {log}
         """
-        
+
 
 rule plot_wgs_insert:
     input:
@@ -85,7 +85,7 @@ rule plot_wgs_insert:
     shell:
         """
         source {params.conda} && conda activate {params.env};
-        
+
         Rscript scripts/plot_picard_metrics.R \
         --qcdir {params.qcdir} \
         --samples {params.samples} \
